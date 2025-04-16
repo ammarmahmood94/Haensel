@@ -9,7 +9,8 @@ import pytensor.tensor as at
 
 # Model Set up
 
-def build_mmm_model(df_processed, channel_means, spend, trend, peak_flag, revenue):
+def build_mmm_model(df_processed, channel_means, spend, trend, peak_flag, 
+    revenue, lagged_matrix, binary_flags):
 
     with pm.Model() as mmm_model:
 
@@ -17,9 +18,13 @@ def build_mmm_model(df_processed, channel_means, spend, trend, peak_flag, revenu
         pm.Data("spend", spend)         # shape: (T, 7)
         pm.Data("trend", trend)                       # shape: (T,)
         pm.Data("peak_flag", peak_flag)               # shape: (T,)
+        pm.Data("lagged_spend", lagged_matrix)        # shape: (T,14)
+        pm.Data("binary_flags", binary_flags)         # shape: (T,2)
 
         T = spend.shape[0]
         n_channels = spend.shape[1]
+        n_lags = lagged_matrix.shape[1]
+        n_binary = binary_flags.shape[1]
         L_max = 52  # max lag
 
         # Priors
@@ -30,6 +35,13 @@ def build_mmm_model(df_processed, channel_means, spend, trend, peak_flag, revenu
         # ⬅️ Use channel_means for HalfNormal sigma priors
         beta_media = pm.HalfNormal("beta_media", sigma=channel_means.values, shape=n_channels)
         alpha_media = pm.Beta("alpha_media", alpha=1, beta=1, shape=n_channels)
+
+        # Lagged channel effects
+        beta_lags = pm.Normal("beta_lags", mu=0, sigma=1, shape=n_lags)
+
+        # Binary campaign flags
+        beta_binary = pm.Normal("beta_binary", mu=0, sigma=1, shape=n_binary)
+
         sigma = pm.HalfNormal("sigma", sigma=1)
 
         # Adstock
@@ -46,7 +58,12 @@ def build_mmm_model(df_processed, channel_means, spend, trend, peak_flag, revenu
 
         trend_data = mmm_model["trend"]
         peak_flag_data = mmm_model["peak_flag"]
-        control_effect = beta_trend * trend_data + beta_peak * peak_flag_data
+        lagged_data = mmm_model["lagged_spend"]
+        binary_data = mmm_model["binary_flags"]
+
+        lagged_effect = at.dot(lagged_data, beta_lags)
+        binary_effect = at.dot(binary_data, beta_binary)
+        control_effect = beta_trend * trend_data + beta_peak * peak_flag_data + lagged_effect + binary_effect
 
         mu = intercept + control_effect + total_media_effect
 
