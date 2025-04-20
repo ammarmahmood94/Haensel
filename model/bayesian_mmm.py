@@ -25,22 +25,27 @@ def build_mmm_model(df_processed, channel_means, spend, trend, peak_flag,
         n_channels = spend.shape[1]
         n_lags = lagged_matrix.shape[1]
         n_binary = binary_flags.shape[1]
-        L_max = 52  # max lag
+        L_max = 12  # max lag
 
         # Priors
         intercept = pm.Normal("intercept", mu=1, sigma=2)
         beta_trend = pm.Normal("beta_trend", mu=0, sigma=1)
-        beta_peak = pm.Normal("beta_peak", mu=0, sigma=10)
+        beta_peak = pm.Normal("beta_peak", mu=0, sigma=2)
 
         # ⬅️ Use channel_means for HalfNormal sigma priors
         beta_media = pm.HalfNormal("beta_media", sigma=channel_means.values, shape=n_channels)
-        alpha_media = pm.Beta("alpha_media", alpha=1, beta=1, shape=n_channels)
+        
+        # media_mu = pm.Normal("media_mu", mu=0, sigma=1)
+        # media_sigma = pm.HalfNormal("media_sigma", sigma=1)
+        # beta_media = pm.Normal("beta_media", mu=media_mu, sigma=media_sigma, shape=n_channels)
+        
+        alpha_media = pm.Beta("alpha_media", alpha=2, beta=2, shape=n_channels)
 
         # Lagged channel effects
-        beta_lags = pm.Normal("beta_lags", mu=0, sigma=1, shape=n_lags)
+        beta_lags = pm.Normal("beta_lags", mu=0, sigma=0.3, shape=n_lags)
 
         # Binary campaign flags
-        beta_binary = pm.Normal("beta_binary", mu=0, sigma=1, shape=n_binary)
+        beta_binary = pm.Normal("beta_binary", mu=0, sigma=0.5, shape=n_binary)
 
         sigma = pm.HalfNormal("sigma", sigma=1)
 
