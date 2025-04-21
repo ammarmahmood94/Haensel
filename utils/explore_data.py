@@ -156,7 +156,7 @@ def trend_plot(df: pd.DataFrame) -> None:
 
         moving_avg = df[col].rolling(window=8).mean()
 
-        ax.plot(df.index, moving_avg, linestyle='--', color='black', label='Moving Avg (4)')
+        ax.plot(df.index, moving_avg, linestyle='--', color='black', label='Moving Avg (8)')
         ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=(3,6,9,12)))
         ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))
         ax.xaxis.set_minor_locator(mdates.MonthLocator(interval=1))
